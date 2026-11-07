@@ -1,0 +1,7 @@
+target/
+report.json
+dependency-reduced-pom.xml
+.DS_Store
+
+.idea
+*.iml

@@ -1,0 +1,7 @@
+out/
+report.json
+
+.idea
+*.iml
+
+.DS_Store

@@ -1,0 +1,101 @@
+/*
+  То же приложение log-stats, что в 01-maven, — но на Gradle.
+  Конвенции каталогов те же (src/main/java, src/main/resources, src/test/java),
+  поэтому код скопирован без изменений. Меняется только «как описана сборка»:
+  вместо декларативного XML — скрипт с кодом, версии — в gradle/libs.versions.toml.
+
+  Запускаем ВСЁ через wrapper: ./gradlew <task>. Gradle ставить не нужно:
+  wrapper сам скачает версию, зафиксированную в gradle/wrapper/gradle-wrapper.properties.
+*/
+
+plugins {
+    id 'java'
+    id 'application'                        // даёт задачи run и distZip; главный класс
+                                            // пишет в скрипты дистрибутива (НЕ в jar)
+    id 'com.dorongold.task-tree' version '4.0.2'  // задача taskTree: печатает граф задач (DAG)
+}
+
+group = 'best.project'
+version = '1.0.0'
+
+// Компилируем байткод под Java 21 (как maven.compiler.release=21 в pom.xml)
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+    options.encoding = 'UTF-8'
+}
+
+repositories {
+    mavenCentral()                          // тот же репозиторий, что у Maven
+}
+
+dependencies {
+    // ВСЕ версии живут в gradle/libs.versions.toml, здесь — только алиасы.
+    // Конфигурации — аналог scope'ов Maven (см. README, шаг 5):
+    //   implementation ~ compile, compileOnly ~ provided, runtimeOnly ~ runtime, test* ~ test
+
+    implementation(libs.gson)               // ЛОВУШКА №3: наша прямая версия — старая 2.9.0
+    implementation(libs.slf4j.api)
+    runtimeOnly(libs.logback.classic)       // для запуска, код её не видит
+    compileOnly(libs.lombok)                // Lombok не попадёт в jar — как provided в Maven
+    annotationProcessor(libs.lombok)        // а вот это его ВКЛЮЧАЕТ: на JDK 23+ процессор
+                                            // аннотаций надо объявлять явно (аналог
+                                            // maven.compiler.proc=full из 01-maven)
+    implementation(libs.converter.gson)     // «коллега добавил для будущего HTTP-клиента» —
+                                            // тянет транзитивный gson 2.10.1 (НОВЕЕ нашего!)
+
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+test {
+    useJUnitPlatform()                      // иначе Gradle не поймёт JUnit 5
+}
+
+application {
+    mainClass = 'best.project.ever.Main'    // для ./gradlew run
+}
+
+// Что анализируем по умолчанию в ./gradlew run (аргументы можно переопределить:
+// ./gradlew run --args='samples/app.log --top 2')
+run {
+    args = ['samples/app.log']
+}
+
+/*
+  Кастомные задачи. Maven потребовал бы написать плагин; здесь — пара строк
+  скрипта, и задача сразу полноправный узел графа.
+*/
+
+// Просто печать: демонстрация doLast (действие задачи, а не конфигурация)
+tasks.register('hello') {
+    group = 'demo'
+    doLast {
+        println 'Это кастомная задача Gradle.'
+    }
+}
+
+// Осмысленная: печатает сводку из report.json, который пишет приложение.
+// dependsOn 'run' — сначала Gradle соберёт и ЗАПУСТИТ приложение (анализ
+// samples/app.log), только потом выполнится наш doLast. Так задача встраивается
+// в граф.
+tasks.register('printTopErrors') {
+    group = 'demo'
+    dependsOn 'run'
+    doLast {
+        def f = file('report.json')
+        if (!f.exists()) {
+            println 'report.json не найден — сначала запустите приложение'
+            return
+        }
+        def text = f.text
+        def total = (text =~ /"totalLines"\s*:\s*(\d+)/)[0][1]
+        println "Всего строк в логе: $total"
+        def section = text.split('"topErrors"')[1]
+        def messages = (section =~ /"message"\s*:\s*"([^"]+)"/).collect { it[1] }
+        def counts = (section =~ /"count"\s*:\s*(\d+)/).collect { it[1] }
+        println 'Топ ошибок (из report.json):'
+        messages.eachWithIndex { m, i ->
+            println "  ${i + 1}. $m x${counts[i]}"
+        }
+    }
+}
