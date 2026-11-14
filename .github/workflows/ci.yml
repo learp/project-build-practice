@@ -13,7 +13,7 @@ jobs:
         java: [21, 25] # всё, что проект обещает поддерживать (README 02-gradle: JDK 21+)
     defaults:
       run:
-        working-directory: 02-gradleе
+        working-directory: 02-gradle
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
