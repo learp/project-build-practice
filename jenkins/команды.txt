@@ -1,0 +1,6 @@
+cd build-practice/jenkins
+docker build -t jenkins-lecture .
+docker run -d --name jenkins -p 8080:8080 -v jenkins_home:/var/jenkins_home jenkins-lecture
+docker logs -f jenkins
+docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+docker restart jenkins
