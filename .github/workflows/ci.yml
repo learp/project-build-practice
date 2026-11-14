@@ -65,7 +65,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: 02-gradle
-          push: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/solution' }}
+          push: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/solution' || github.ref == 'refs/heads/ci' }}
           tags: ghcr.io/learp/log-stats:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
