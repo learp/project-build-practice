@@ -1,0 +1,29 @@
+# Тот же конвейер, синтаксисом GitLab CI — для сравнения side-by-side
+# с .github/workflows/ci.yml (лекция «Непрерывная интеграция», слайд про GitLab).
+#
+# Ключевые различия с GHA, которые видны глазами:
+#  - stages рисуются графом в UI;
+#  - НЕТ working-directory — заходим в подпроект cd в script;
+#  - джоба = контейнер: образ с JDK выбираем сами (image:).
+
+image: eclipse-temurin:21-jdk # шаред-раннеры голые — без JDK ничего не соберётся
+
+stages: [build]
+
+build:
+  stage: build
+  # GitLab-кэш живёт относительно $CI_PROJECT_DIR — держим Gradle-дом внутри проекта
+  variables:
+    GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle-home"
+  script:
+    - cd 02-gradle
+    - ./gradlew --no-daemon build
+  cache:
+    key: gradle-$CI_COMMIT_REF_SLUG
+    paths:
+      - .gradle-home/caches
+      - .gradle-home/wrapper
+      - 02-gradle/.gradle
+  artifacts:
+    paths:
+      - 02-gradle/build/libs/

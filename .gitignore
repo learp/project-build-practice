@@ -1,0 +1,10 @@
+# IDE
+.idea/
+
+# OS / редакторы
+.DS_Store
+*.swp
+
+# docker-demo: генерируемые материалы (скрипт prepare-rootfs.sh)
+docker-demo/rootfs/
+docker-demo/rootfs.tar

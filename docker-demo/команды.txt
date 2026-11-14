@@ -1,0 +1,36 @@
+cd build-practice/docker-demo
+docker run -it --privileged --cgroupns=host -v "$(pwd)/rootfs:/rootfs" demo-host bash
+
+for i in $(seq 8); do sleep 600 & done
+jobs
+ps aux
+hostname
+ip a
+
+unshare --pid --fork --mount-proc bash
+ps aux
+exit
+
+unshare --uts bash -c 'hostname mini && hostname'
+
+unshare --net bash -c 'ip -brief a; echo ---; ip r'
+
+ls /rootfs
+chroot /rootfs /bin/sh
+ls /
+exit
+
+unshare --mount --pid --fork --net --uts chroot /rootfs /bin/sh -c 'mount -t proc proc /proc; hostname demo; ps aux; ls /'
+
+mkdir /sys/fs/cgroup/boom
+echo 200M > /sys/fs/cgroup/boom/memory.max
+echo 0    > /sys/fs/cgroup/boom/memory.swap.max
+echo $$   > /sys/fs/cgroup/boom/cgroup.procs
+python3 -c 'a = bytearray(1_000_000_000)'
+python3 -c 'a = bytearray(100_000_000)'
+cat /sys/fs/cgroup/boom/memory.events
+
+docker run --rm alpine ps aux
+
+echo $$ > /sys/fs/cgroup/cgroup.procs
+rmdir /sys/fs/cgroup/boom
